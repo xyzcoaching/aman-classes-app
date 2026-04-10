@@ -8,8 +8,13 @@ dotenv.config();
 
 const app = express();
 
+// ✅ CORS (production friendly)
+app.use(cors({
+  origin: '*',
+  credentials: true
+}));
+
 // Middleware
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -25,21 +30,21 @@ app.use('/api/schedule', require('./routes/schedule'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 
 // Health check
-app.get('/api/health', (req, res) => res.json({ status: 'ok', message: 'Aman Classes API running' }));
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Aman Classes API running' });
+});
 
-// MongoDB connection
+// ✅ PORT (Render ke liye)
 const PORT = process.env.PORT || 5000;
 
+// ✅ Server start (IMPORTANT)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
+
+// ✅ MongoDB connect (alag se)
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('✅ MongoDB connected');
-    
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
-  })
-  .catch(err => {
-    console.error('❌ MongoDB connection error:', err);
-  });
+  .then(() => console.log('✅ MongoDB connected'))
+  .catch(err => console.error('❌ MongoDB error:', err));
 
 module.exports = app;
