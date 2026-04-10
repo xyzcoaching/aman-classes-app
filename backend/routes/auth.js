@@ -7,11 +7,14 @@ const { auth } = require('../middleware/auth');
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+
     const user = await User.findOne({ email }).populate('studentId');
     if (!user) return res.status(400).json({ message: 'Invalid credentials' });
 
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+    // 🔥 FIX: direct password compare
+    if (password !== user.password) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
 
     const token = jwt.sign(
       { id: user._id, role: user.role, name: user.name },
@@ -21,8 +24,15 @@ router.post('/login', async (req, res) => {
 
     res.json({
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, studentId: user.studentId },
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        studentId: user.studentId
+      },
     });
+
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -31,7 +41,10 @@ router.post('/login', async (req, res) => {
 // Get current user
 router.get('/me', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password').populate('studentId');
+    const user = await User.findById(req.user.id)
+      .select('-password')
+      .populate('studentId');
+
     res.json(user);
   } catch (err) {
     res.status(500).json({ message: err.message });
