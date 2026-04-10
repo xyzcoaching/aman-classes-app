@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const api = axios.create({ baseURL: '/api' });
+const api = axios.create({ baseURL: 'https://aman-backend-ohpj.onrender.com' });
 
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
