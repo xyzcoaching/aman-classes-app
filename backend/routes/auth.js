@@ -8,20 +8,43 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email }).populate('studentId');
-    if (!user) return res.status(400).json({ message: 'Invalid credentials' });
+    // user find karo
+    let user = await User.findOne({ email }).populate('studentId');
 
-    // 🔥 FIX: direct password compare
-    if (password !== user.password) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+    // 🔥 agar user nahi mila → default admin create
+    if (!user) {
+      if (email === 'admin@amanclasses.com' && password === 'admin123') {
+        user = new User({
+          name: 'Admin',
+          email: 'admin@amanclasses.com',
+          password: 'admin123', // auto hash hoga (model me)
+          role: 'admin',
+        });
+
+        await user.save();
+      } else {
+        return res.status(400).json({ message: 'Invalid email or password' });
+      }
     }
 
+    // 🔥 password check (IMPORTANT FIX)
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid email or password' });
+    }
+
+    // token generate
     const token = jwt.sign(
-      { id: user._id, role: user.role, name: user.name },
+      {
+        id: user._id,
+        role: user.role,
+        name: user.name,
+      },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
 
+    // response
     res.json({
       token,
       user: {
@@ -29,7 +52,7 @@ router.post('/login', async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        studentId: user.studentId
+        studentId: user.studentId,
       },
     });
 
