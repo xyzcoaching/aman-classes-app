@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt'); // ✅ FIXED (bcryptjs hata diya)
 const User = require('../models/User');
 const { auth } = require('../middleware/auth');
 
@@ -9,19 +9,27 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // 1. Find user
     const user = await User.findOne({ email }).populate('studentId');
-    if (!user) return res.status(400).json({ message: 'Invalid credentials' });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid email or password' });
+    }
 
-    // ✅ Correct password check
+    // 2. Compare password (🔥 MAIN FIX)
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid email or password' });
+    }
+
+    // 3. Create token
     const token = jwt.sign(
       { id: user._id, role: user.role, name: user.name },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
 
+    // 4. Send response
     res.json({
       token,
       user: {
@@ -34,7 +42,8 @@ router.post('/login', async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
